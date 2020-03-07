@@ -17,6 +17,7 @@ package k8sprocessor
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	resourcepb "github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1"
 	tracepb "github.com/census-instrumentation/opencensus-proto/gen-go/trace/v1"
@@ -95,10 +96,16 @@ func (kp *kubernetesprocessor) Shutdown() error {
 
 func (kp *kubernetesprocessor) ConsumeTraceData(ctx context.Context, td consumerdata.TraceData) error {
 	var podIP string
+
+	if c, ok := client.FromContext(ctx); ok {
+		kp.logger.Info(fmt.Sprintf("Context value on entry: %s", c.IP))
+	}
+
 	// check if the application, a collector/agent or a prior processor has already
 	// annotated the batch with IP.
 	if td.Resource != nil {
 		podIP = td.Resource.Labels[ipLabelName]
+		kp.logger.Info(fmt.Sprintf("Fetching podIP from Resource: %s", podIP))
 	}
 
 	// Jaeger client libs tag the process with the process/resource IP and
@@ -107,16 +114,19 @@ func (kp *kubernetesprocessor) ConsumeTraceData(ctx context.Context, td consumer
 	if podIP == "" && td.SourceFormat == sourceFormatJaeger {
 		if td.Node != nil {
 			podIP = td.Node.Attributes[ipLabelName]
+			kp.logger.Info(fmt.Sprintf("Fetching podIP from Node: %s", podIP))
 		}
 	}
 
 	// If this was passed using Zipkin format, the information used for tagging might be present
 	// in each span attribute and should be tagged not on a resource, but rather span level
 	if podIP == "" && td.SourceFormat == sourceFormatZipkin {
+		kp.logger.Info(fmt.Sprintf("Zipkin format detected"))
 		for _, span := range td.Spans {
 			_ = kp.consumeZipkinSpan(ctx, span)
 		}
 	} else {
+		kp.logger.Info(fmt.Sprintf("Non-Zipkin format detected"))
 		_ = kp.consumeTraceBatch(podIP, ctx, &td)
 	}
 
@@ -129,6 +139,7 @@ func (kp *kubernetesprocessor) consumeTraceBatch(podIP string, ctx context.Conte
 	if podIP == "" {
 		if c, ok := client.FromContext(ctx); ok {
 			podIP = c.IP
+			kp.logger.Info(fmt.Sprintf("Fetching podIP from Context: %s", podIP))
 		}
 	}
 
@@ -140,6 +151,8 @@ func (kp *kubernetesprocessor) consumeTraceBatch(podIP string, ctx context.Conte
 			td.Resource.Labels = map[string]string{}
 		}
 		td.Resource.Labels[ipLabelName] = podIP
+	} else {
+		kp.logger.Info(fmt.Sprintf("poDIP not set"))
 	}
 
 	// Don't invoke any k8s client functionality in passthrough mode.
@@ -173,19 +186,35 @@ func (kp *kubernetesprocessor) consumeZipkinSpan(ctx context.Context, span *trac
 		value := span.Attributes.AttributeMap[ipLabelName]
 		if value != nil {
 			podIP = value.GetStringValue().Value
+			kp.logger.Info(fmt.Sprintf("Retrieved podIP from span attribute: %s", podIP))
+
 		}
+	}
+
+	if span.Attributes == nil {
+		span.Attributes = &tracepb.Span_Attributes{}
+		kp.logger.Info(fmt.Sprintf("Initialized span attribute"))
+	}
+
+	if span.Attributes.AttributeMap == nil {
+		span.Attributes.AttributeMap = make(map[string]*tracepb.AttributeValue, 0)
+		kp.logger.Info(fmt.Sprintf("Initialized span attribute map"))
 	}
 
 	// Check if the receiver detected client IP.
 	if podIP == "" {
 		if c, ok := client.FromContext(ctx); ok {
 			podIP = c.IP
+			kp.logger.Info(fmt.Sprintf("Fetching podIP from Context: %s", podIP))
 			if span.Attributes != nil && span.Attributes.AttributeMap != nil {
 				span.Attributes.AttributeMap[ipLabelName] = &tracepb.AttributeValue{
 					Value: &tracepb.AttributeValue_StringValue{
 						StringValue: &tracepb.TruncatableString{
 							Value: podIP}}}
+				kp.logger.Info(fmt.Sprintf("Set span Attribute for IP to: %s", podIP))
 			}
+		} else {
+			kp.logger.Info(fmt.Sprintf("PodIP not detected"))
 		}
 	}
 
@@ -201,6 +230,7 @@ func (kp *kubernetesprocessor) consumeZipkinSpan(ctx context.Context, span *trac
 	}
 
 	for k, v := range attrs {
+		kp.logger.Info(fmt.Sprintf("Filling attribute %s", k))
 		span.Attributes.AttributeMap[k] = &tracepb.AttributeValue{
 			Value: &tracepb.AttributeValue_StringValue{
 				StringValue: &tracepb.TruncatableString{
