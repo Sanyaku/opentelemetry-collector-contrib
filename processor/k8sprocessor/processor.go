@@ -17,6 +17,7 @@ package k8sprocessor
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	resourcepb "github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1"
 	"github.com/open-telemetry/opentelemetry-collector/client"
@@ -94,6 +95,10 @@ func (kp *kubernetesprocessor) Shutdown() error {
 
 func (kp *kubernetesprocessor) ConsumeTraceData(ctx context.Context, td consumerdata.TraceData) error {
 	var podIP string
+
+	if c, ok := client.FromContext(ctx); ok {
+		kp.logger.Info(fmt.Sprintf("Context value on entry: %s", c.IP))
+	}
 	// check if the application, a collector/agent or a prior processor has already
 	// annotated the batch with IP.
 	if td.Resource != nil {
