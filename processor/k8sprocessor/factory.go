@@ -100,3 +100,36 @@ func createProcessorOpts(cfg configmodels.Processor) []Option {
 
 	return opts
 }
+
+// CreateLogsProcessor creates a logs processor based on this config.
+func (f *Factory) CreateLogProcessor(
+	ctx context.Context,
+	params component.ProcessorCreateParams,
+	cfg configmodels.Processor,
+	nextConsumer consumer.LogConsumer,
+) (component.LogProcessor, error) {
+	oCfg := cfg.(*Config)
+	opts := []Option{}
+	if oCfg.Passthrough {
+		opts = append(opts, WithPassthrough())
+	}
+
+	// extraction rules
+	opts = append(opts, WithExtractMetadata(oCfg.Extract.Metadata...))
+	opts = append(opts, WithExtractLabels(oCfg.Extract.Labels...))
+	opts = append(opts, WithExtractAnnotations(oCfg.Extract.Annotations...))
+	opts = append(opts, WithExtractTags(oCfg.Extract.Tags))
+
+	if oCfg.OwnerLookupEnabled {
+		opts = append(opts, WithOwnerLookupEnabled())
+	}
+
+	// filters
+	opts = append(opts, WithFilterNode(oCfg.Filter.Node, oCfg.Filter.NodeFromEnvVar))
+	opts = append(opts, WithFilterNamespace(oCfg.Filter.Namespace))
+	opts = append(opts, WithFilterLabels(oCfg.Filter.Labels...))
+	opts = append(opts, WithFilterFields(oCfg.Filter.Fields...))
+	opts = append(opts, WithAPIConfig(oCfg.APIConfig))
+
+	return NewLogsProcessor(params.Logger, nextConsumer, f.KubeClient, opts...)
+}

@@ -43,6 +43,7 @@ type kubernetesprocessor struct {
 	rules               kube.ExtractionRules
 	filters             kube.Filters
 	nextTraceConsumer   consumer.TraceConsumer
+	logConsumer     consumer.LogConsumer
 	nextMetricsConsumer consumer.MetricsConsumer
 }
 
@@ -315,4 +316,91 @@ func stringAttributeFromMap(attrs pdata.AttributeMap, key string) string {
 		}
 	}
 	return ""
+}
+
+//
+func NewLogsProcessor(
+	logger *zap.Logger,
+	nextConsumer consumer.LogConsumer,
+	kubeClient kube.ClientProvider,
+	options ...Option,
+) (component.LogProcessor, error) {
+	kp := &kubernetesprocessor{logger: logger, logConsumer: nextConsumer}
+	for _, opt := range options {
+		if err := opt(kp); err != nil {
+			return nil, err
+		}
+	}
+
+	if kubeClient == nil {
+		kubeClient = kube.New
+	}
+	if !kp.passthroughMode {
+		kc, err := kubeClient(logger, kp.apiConfig, kp.rules, kp.filters, nil, nil, nil)
+		if err != nil {
+			return nil, err
+		}
+		kp.kc = kc
+	}
+	return kp, nil
+}
+
+func (kp *kubernetesprocessor) ConsumeLogs(ctx context.Context, md pdata.Logs) error {
+	rss := md.ResourceLogs()
+	kp.logger.Info("received rss len: ", zap.Int("size", rss.Len()))
+	for i := 0; i < rss.Len(); i++ {
+		rs := rss.At(i)
+		if rs.IsNil() {
+			continue
+		}
+
+		var podIP string
+		for j := 0; j < rs.Logs().Len(); j++ {
+			resource := rs.Logs().At(j)
+
+			// check if the application, a collector/agent or a prior processor has already
+			// annotated the batch with IP.
+			if !resource.IsNil() {
+				podIP = kp.k8sIPFromAttributes(resource.Attributes())
+			}
+
+			// Check if the receiver detected client IP.
+			if podIP == "" {
+				if c, ok := client.FromContext(ctx); ok {
+					podIP = c.IP
+				}
+			}
+
+			if podIP != "" {
+				if resource.IsNil() {
+					resource.InitEmpty()
+				}
+				resource.Attributes().InsertString(k8sIPLabelName, podIP)
+			}
+
+			// Don't invoke any k8s client functionality in passthrough mode.
+			// Just tag the IP and forward the batch.
+			if kp.passthroughMode {
+				continue
+			}
+
+			// add k8s tags to resource
+			attrsToAdd := kp.getAttributesForPodIP(podIP)
+			if len(attrsToAdd) == 0 {
+				continue
+			}
+
+			if resource.IsNil() {
+				resource.InitEmpty()
+			}
+
+			attrs := resource.Attributes()
+			for k, v := range attrsToAdd {
+				attrs.InsertString(k, v)
+			}
+		}
+	}
+
+	kp.logConsumer.ConsumeLogs(ctx, md)
+	return nil
 }

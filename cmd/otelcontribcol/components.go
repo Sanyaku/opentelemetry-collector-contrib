@@ -40,6 +40,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/sourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/carbonreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/collectdreceiver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummylogsreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerlegacyreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/kubeletstatsreceiver"
@@ -73,6 +74,7 @@ func components() (config.Factories, error) {
 	}
 
 	receivers := []component.ReceiverFactoryBase{
+		&dummylogsreceiver.Factory{},
 		&collectdreceiver.Factory{},
 		&sapmreceiver.Factory{},
 		&zipkinscribereceiver.Factory{},
