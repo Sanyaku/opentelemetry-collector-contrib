@@ -33,6 +33,7 @@ func init() {
 		viewOtherAdded,
 		viewOtherDeleted,
 		viewIPLookupMiss,
+		viewNameLookupMiss,
 	)
 }
 
@@ -45,7 +46,8 @@ var (
 	mOtherAdded   = stats.Int64("otelsvc/k8s/other_added", "Number of other add events received", "1")
 	mOtherDeleted = stats.Int64("otelsvc/k8s/other_deleted", "Number of other delete events received", "1")
 
-	mIPLookupMiss = stats.Int64("otelsvc/k8s/ip_lookup_miss", "Number of times pod by IP lookup failed.", "1")
+	mIPLookupMiss   = stats.Int64("otelsvc/k8s/ip_lookup_miss", "Number of times pod by IP lookup failed.", "1")
+	mNameLookupMiss = stats.Int64("otelsvc/k8s/name_lookup_miss", "Number of times pod by name lookup failed.", "1")
 )
 
 var viewPodsUpdated = &view.View{
@@ -97,6 +99,13 @@ var viewIPLookupMiss = &view.View{
 	Aggregation: view.Sum(),
 }
 
+var viewNameLookupMiss = &view.View{
+	Name:        mNameLookupMiss.Name(),
+	Description: mNameLookupMiss.Description(),
+	Measure:     mNameLookupMiss,
+	Aggregation: view.Sum(),
+}
+
 // RecordPodUpdated increments the metric that records pod update events received.
 func RecordPodUpdated() {
 	stats.Record(context.Background(), mPodsUpdated.M(int64(1)))
@@ -130,4 +139,9 @@ func RecordOtherDeleted() {
 // RecordIPLookupMiss increments the metric that records Pod lookup by IP misses.
 func RecordIPLookupMiss() {
 	stats.Record(context.Background(), mIPLookupMiss.M(int64(1)))
+}
+
+// RecordNameLookupMiss increments the metric that records Pod lookup by Name misses.
+func RecordNameLookupMiss() {
+	stats.Record(context.Background(), mNameLookupMiss.M(int64(1)))
 }

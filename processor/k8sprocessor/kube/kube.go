@@ -82,6 +82,8 @@ type Pod struct {
 	StartTime  *metav1.Time
 	Ignore     bool
 
+	LogStreamName string
+
 	DeletedAt time.Time
 }
 

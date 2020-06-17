@@ -42,19 +42,19 @@ func newFakeAPIClientset(_ k8sconfig.APIConfig) (kubernetes.Interface, error) {
 }
 
 func podAddAndUpdateTest(t *testing.T, c *WatchClient, handler func(obj interface{})) {
-	assert.Equal(t, len(c.Pods), 0)
+	assert.Equal(t, len(c.IpToPod), 0)
 
 	// pod without IP
 	pod := &api_v1.Pod{}
 	handler(pod)
-	assert.Equal(t, len(c.Pods), 0)
+	assert.Equal(t, len(c.IpToPod), 0)
 
 	pod = &api_v1.Pod{}
 	pod.Name = "podA"
 	pod.Status.PodIP = "1.1.1.1"
 	handler(pod)
-	assert.Equal(t, len(c.Pods), 1)
-	got := c.Pods["1.1.1.1"]
+	assert.Equal(t, len(c.IpToPod), 1)
+	got := c.IpToPod["1.1.1.1"]
 	assert.Equal(t, got.Address, "1.1.1.1")
 	assert.Equal(t, got.Name, "podA")
 
@@ -62,8 +62,8 @@ func podAddAndUpdateTest(t *testing.T, c *WatchClient, handler func(obj interfac
 	pod.Name = "podB"
 	pod.Status.PodIP = "1.1.1.1"
 	handler(pod)
-	assert.Equal(t, len(c.Pods), 1)
-	got = c.Pods["1.1.1.1"]
+	assert.Equal(t, len(c.IpToPod), 1)
+	got = c.IpToPod["1.1.1.1"]
 	assert.Equal(t, got.Address, "1.1.1.1")
 	assert.Equal(t, got.Name, "podB")
 }
@@ -138,15 +138,15 @@ func TestPodAdd(t *testing.T) {
 
 func TestPodHostNetwork(t *testing.T) {
 	c, _ := newTestClient(t)
-	assert.Equal(t, 0, len(c.Pods))
+	assert.Equal(t, 0, len(c.IpToPod))
 
 	pod := &api_v1.Pod{}
 	pod.Name = "podA"
 	pod.Status.PodIP = "1.1.1.1"
 	pod.Spec.HostNetwork = true
 	c.handlePodAdd(pod)
-	assert.Equal(t, len(c.Pods), 1)
-	got := c.Pods["1.1.1.1"]
+	assert.Equal(t, len(c.IpToPod), 1)
+	got := c.IpToPod["1.1.1.1"]
 	assert.Equal(t, got.Address, "1.1.1.1")
 	assert.Equal(t, got.Name, "podA")
 	assert.True(t, got.Ignore)
@@ -154,7 +154,7 @@ func TestPodHostNetwork(t *testing.T) {
 
 func TestPodAddOutOfSync(t *testing.T) {
 	c, _ := newTestClient(t)
-	assert.Equal(t, len(c.Pods), 0)
+	assert.Equal(t, len(c.IpToPod), 0)
 
 	pod := &api_v1.Pod{}
 	pod.Name = "podA"
@@ -162,8 +162,8 @@ func TestPodAddOutOfSync(t *testing.T) {
 	startTime := meta_v1.NewTime(time.Now())
 	pod.Status.StartTime = &startTime
 	c.handlePodAdd(pod)
-	assert.Equal(t, len(c.Pods), 1)
-	got := c.Pods["1.1.1.1"]
+	assert.Equal(t, len(c.IpToPod), 1)
+	got := c.IpToPod["1.1.1.1"]
 	assert.Equal(t, got.Address, "1.1.1.1")
 	assert.Equal(t, got.Name, "podA")
 
@@ -173,8 +173,8 @@ func TestPodAddOutOfSync(t *testing.T) {
 	startTime2 := meta_v1.NewTime(time.Now().Add(-time.Second * 10))
 	pod.Status.StartTime = &startTime2
 	c.handlePodAdd(pod)
-	assert.Equal(t, len(c.Pods), 1)
-	got = c.Pods["1.1.1.1"]
+	assert.Equal(t, len(c.IpToPod), 1)
+	got = c.IpToPod["1.1.1.1"]
 	assert.Equal(t, got.Address, "1.1.1.1")
 	assert.Equal(t, got.Name, "podA")
 }
@@ -190,8 +190,8 @@ func TestPodUpdate(t *testing.T) {
 func TestPodDelete(t *testing.T) {
 	c, _ := newTestClient(t)
 	podAddAndUpdateTest(t, c, c.handlePodAdd)
-	assert.Equal(t, len(c.Pods), 1)
-	assert.Equal(t, c.Pods["1.1.1.1"].Address, "1.1.1.1")
+	assert.Equal(t, len(c.IpToPod), 1)
+	assert.Equal(t, c.IpToPod["1.1.1.1"].Address, "1.1.1.1")
 
 	// delete empty IP pod
 	c.handlePodDelete(&api_v1.Pod{})
@@ -200,8 +200,8 @@ func TestPodDelete(t *testing.T) {
 	pod := &api_v1.Pod{}
 	pod.Status.PodIP = "9.9.9.9"
 	c.handlePodDelete(pod)
-	assert.Equal(t, len(c.Pods), 1)
-	got := c.Pods["1.1.1.1"]
+	assert.Equal(t, len(c.IpToPod), 1)
+	got := c.IpToPod["1.1.1.1"]
 	assert.Equal(t, got.Address, "1.1.1.1")
 	assert.Equal(t, len(c.deleteQueue), 0)
 
@@ -209,8 +209,8 @@ func TestPodDelete(t *testing.T) {
 	pod = &api_v1.Pod{}
 	pod.Status.PodIP = "1.1.1.1"
 	c.handlePodDelete(pod)
-	got = c.Pods["1.1.1.1"]
-	assert.Equal(t, len(c.Pods), 1)
+	got = c.IpToPod["1.1.1.1"]
+	assert.Equal(t, len(c.IpToPod), 1)
 	assert.Equal(t, got.Address, "1.1.1.1")
 	assert.Equal(t, len(c.deleteQueue), 0)
 
@@ -220,7 +220,7 @@ func TestPodDelete(t *testing.T) {
 	pod.Status.PodIP = "1.1.1.1"
 	tsBeforeDelete := time.Now()
 	c.handlePodDelete(pod)
-	assert.Equal(t, len(c.Pods), 1)
+	assert.Equal(t, len(c.IpToPod), 1)
 	assert.Equal(t, len(c.deleteQueue), 1)
 	deleteRequest := c.deleteQueue[0]
 	assert.Equal(t, deleteRequest.ip, "1.1.1.1")
@@ -232,15 +232,15 @@ func TestPodDelete(t *testing.T) {
 func TestDeleteQueue(t *testing.T) {
 	c, _ := newTestClient(t)
 	podAddAndUpdateTest(t, c, c.handlePodAdd)
-	assert.Equal(t, len(c.Pods), 1)
-	assert.Equal(t, c.Pods["1.1.1.1"].Address, "1.1.1.1")
+	assert.Equal(t, len(c.IpToPod), 1)
+	assert.Equal(t, c.IpToPod["1.1.1.1"].Address, "1.1.1.1")
 
 	// delete pod
 	pod := &api_v1.Pod{}
 	pod.Name = "podB"
 	pod.Status.PodIP = "1.1.1.1"
 	c.handlePodDelete(pod)
-	assert.Equal(t, len(c.Pods), 1)
+	assert.Equal(t, len(c.IpToPod), 1)
 	assert.Equal(t, len(c.deleteQueue), 1)
 }
 
@@ -251,11 +251,11 @@ func TestDeleteLoop(t *testing.T) {
 	pod := &api_v1.Pod{}
 	pod.Status.PodIP = "1.1.1.1"
 	c.handlePodAdd(pod)
-	assert.Equal(t, len(c.Pods), 1)
+	assert.Equal(t, len(c.IpToPod), 1)
 	assert.Equal(t, len(c.deleteQueue), 0)
 
 	c.handlePodDelete(pod)
-	assert.Equal(t, len(c.Pods), 1)
+	assert.Equal(t, len(c.IpToPod), 1)
 	assert.Equal(t, len(c.deleteQueue), 1)
 
 	gracePeriod := time.Millisecond * 500
@@ -263,7 +263,7 @@ func TestDeleteLoop(t *testing.T) {
 	go func() {
 		time.Sleep(time.Millisecond * 50)
 		c.m.Lock()
-		assert.Equal(t, len(c.Pods), 1)
+		assert.Equal(t, len(c.IpToPod), 1)
 		c.m.Unlock()
 		c.deleteMut.Lock()
 		assert.Equal(t, len(c.deleteQueue), 1)
@@ -271,7 +271,7 @@ func TestDeleteLoop(t *testing.T) {
 
 		time.Sleep(gracePeriod + (time.Millisecond * 50))
 		c.m.Lock()
-		assert.Equal(t, len(c.Pods), 0)
+		assert.Equal(t, len(c.IpToPod), 0)
 		c.m.Unlock()
 		c.deleteMut.Lock()
 		assert.Equal(t, len(c.deleteQueue), 0)
@@ -286,7 +286,7 @@ func TestGetIgnoredPod(t *testing.T) {
 	pod := &api_v1.Pod{}
 	pod.Status.PodIP = "1.1.1.1"
 	c.handlePodAdd(pod)
-	c.Pods[pod.Status.PodIP].Ignore = true
+	c.IpToPod[pod.Status.PodIP].Ignore = true
 	got, ok := c.GetPodByIP(pod.Status.PodIP)
 	assert.Nil(t, got)
 	assert.False(t, ok)

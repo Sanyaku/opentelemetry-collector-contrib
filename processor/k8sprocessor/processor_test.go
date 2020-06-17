@@ -615,7 +615,7 @@ func assertResourceHasStringAttribute(t *testing.T, r pdata.Resource, k, v strin
 //			"ns":          "default",
 //			"another tag": "value",
 //		}
-//		kc.Pods[ip] = &kube.Pod{Attributes: attrs}
+//		kc.IpToPod[ip] = &kube.Pod{Attributes: attrs}
 //		ctx := client.NewContext(context.Background(), &client.Client{IP: ip})
 //		p.ConsumeTraceData(ctx, consumerdata.TraceData{})
 //	}

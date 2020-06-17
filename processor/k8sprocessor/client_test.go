@@ -57,7 +57,7 @@ func newFakeClient(_ *zap.Logger, apiCfg k8sconfig.APIConfig, rules kube.Extract
 	}, nil
 }
 
-// GetPodByIP looks up FakeClient.Pods map by the provided string.
+// GetPodByIP looks up FakeClient.IpToPod map by the provided string.
 func (f *fakeClient) GetPodByIP(ip string) (*kube.Pod, bool) {
 	p, ok := f.Pods[ip]
 	return p, ok
