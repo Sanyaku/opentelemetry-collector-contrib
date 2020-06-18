@@ -19,7 +19,6 @@ package sumologicexporter
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/spf13/viper"

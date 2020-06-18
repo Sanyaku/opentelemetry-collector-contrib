@@ -56,6 +56,10 @@ github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6 h1:fLjPD/aNc3UIO
 github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200709094216-57486cde1244 h1:+61Mg7lSmKiNCgnazCkSeofOyGYkwUO+CHSqUqXe42w=
 github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200709094216-57486cde1244/go.mod h1:/YIsu0aIh8uhClFEl+3AMDMVFCqMaghes9NmDd76Q5A=
+github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200615151012-78b0f93ca349 h1:UMhNMx0DBTp4yyw9EejdmdnLQpbeHa5TuYUwVjmEJLo=
+github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200615151012-78b0f93ca349/go.mod h1:5T4FxThCDCuB2Sbn8UwU+TjoYsxKHH3UywmZoLUwAbg=
+github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200617091426-534450443e58 h1:oDk5uVV59DFHOAVa0w06qBXIqXDalPVBDR829T5MIcg=
+github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200617091426-534450443e58/go.mod h1:5T4FxThCDCuB2Sbn8UwU+TjoYsxKHH3UywmZoLUwAbg=
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/agnivade/levenshtein v1.0.1/go.mod h1:CURSv5d9Uaml+FovSIICkLbAUZ9S4RqaHDIsdSBg7lM=

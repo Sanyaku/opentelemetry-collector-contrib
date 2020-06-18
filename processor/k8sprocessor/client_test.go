@@ -63,6 +63,12 @@ func (f *fakeClient) GetPodByIP(ip string) (*kube.Pod, bool) {
 	return p, ok
 }
 
+// GetPodByName looks up FakeClient.IpToPod map by the provided string.
+func (f *fakeClient) GetPodByName(name string) (*kube.Pod, bool) {
+	p, ok := f.Pods[name]
+	return p, ok
+}
+
 // Start is a noop for FakeClient.
 func (f *fakeClient) Start() {
 	if f.Informer != nil {
