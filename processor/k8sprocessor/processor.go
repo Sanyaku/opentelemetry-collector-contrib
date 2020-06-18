@@ -361,7 +361,18 @@ func (kp *kubernetesprocessor) ConsumeLogs(ctx context.Context, md pdata.Logs) e
 			// check if the application, a collector/agent or a prior processor has already
 			// annotated the batch with IP.
 			if !resource.IsNil() {
-				podIP = kp.k8sIPFromAttributes(resource.Attributes())
+				pod_attr, ok := resource.Attributes().Get("pod_name")
+
+				if ok {
+					pod, ok := kp.kc.GetPodByName(pod_attr.StringVal())
+					if ok {
+						podIP = pod.Address
+					}
+				}
+
+				if podIP == "" {
+					podIP = kp.k8sIPFromAttributes(resource.Attributes())
+				}
 			}
 
 			// Check if the receiver detected client IP.

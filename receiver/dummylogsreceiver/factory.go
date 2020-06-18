@@ -82,11 +82,11 @@ func (s *Server) Start() {
 			attributes := nlogs.Attributes()
 			nlogs.SetBody(log.Log)
 			// nlogs.SetTimestamp(log.Date)
-			if len(details) == 1 && len(details[0]) == 4 {
-				attributes.InsertString("pod_name", details[0][0])
-				attributes.InsertString("namespace", details[0][1])
-				attributes.InsertString("container_name", details[0][2])
-				attributes.InsertString("docker_id", details[0][3])
+			if len(details) == 1 && len(details[0]) == 5 {
+				attributes.InsertString("pod_name", details[0][1])
+				attributes.InsertString("namespace", details[0][2])
+				attributes.InsertString("container_name", details[0][3])
+				attributes.InsertString("docker_id", details[0][4])
 			}
 		}
 		s.nextConsumer.ConsumeLogs(s.ctx, flogs)

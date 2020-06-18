@@ -45,10 +45,10 @@ type WatchClient struct {
 	stopCh          chan struct{}
 	op              OwnerAPI
 
-	IpToPod        map[string]*Pod
-	LogStreamToPod map[string]*Pod
-	Rules          ExtractionRules
-	Filters        Filters
+	IpToPod   map[string]*Pod
+	NameToPod map[string]*Pod
+	Rules     ExtractionRules
+	Filters   Filters
 }
 
 // Extract deployment name from the pod name. Pod name is created using
@@ -61,7 +61,7 @@ func New(logger *zap.Logger, apiCfg k8sconfig.APIConfig, rules ExtractionRules, 
 	go c.deleteLoop(time.Second*30, defaultPodDeleteGracePeriod)
 
 	c.IpToPod = map[string]*Pod{}
-	c.LogStreamToPod = map[string]*Pod{}
+	c.NameToPod = map[string]*Pod{}
 	if newClientSet == nil {
 		newClientSet = k8sconfig.MakeClient
 	}
@@ -152,11 +152,6 @@ func (c *WatchClient) handlePodDelete(obj interface{}) {
 	}
 }
 
-func (c *WatchClient) podLogStreamName(pod *api_v1.Pod) string {
-	// FIXME: this needs to follow the rules
-	return pod.Name
-}
-
 func (c *WatchClient) deleteLoop(interval time.Duration, gracePeriod time.Duration) {
 	// This loop runs after N seconds and deletes pods from cache.
 	// It iterates over the delete queue and deletes all that aren't
@@ -184,7 +179,7 @@ func (c *WatchClient) deleteLoop(interval time.Duration, gracePeriod time.Durati
 					// and the underlying state (ip<>pod mapping) has not changed.
 					if p.Name == d.name {
 						delete(c.IpToPod, d.ip)
-						delete(c.LogStreamToPod, p.LogStreamName)
+						delete(c.NameToPod, p.Name)
 					}
 				}
 			}
@@ -211,10 +206,10 @@ func (c *WatchClient) GetPodByIP(ip string) (*Pod, bool) {
 	return nil, false
 }
 
-// GetPodByLogStreamName takes the log stream name of the pod and returns the pod the name is associated with.
-func (c *WatchClient) GetPodByLogStreamName(name string) (*Pod, bool) {
+// GetPodByName takes the pod name and returns pod associated with.
+func (c *WatchClient) GetPodByName(name string) (*Pod, bool) {
 	c.m.RLock()
-	pod, ok := c.LogStreamToPod[name]
+	pod, ok := c.NameToPod[name]
 	c.m.RUnlock()
 	if ok {
 		if pod.Ignore {
@@ -388,10 +383,9 @@ func (c *WatchClient) addOrUpdatePod(pod *api_v1.Pod) {
 		}
 	}
 	newPod := &Pod{
-		Name:          pod.Name,
-		Address:       pod.Status.PodIP,
-		StartTime:     pod.Status.StartTime,
-		LogStreamName: c.podLogStreamName(pod),
+		Name:      pod.Name,
+		Address:   pod.Status.PodIP,
+		StartTime: pod.Status.StartTime,
 	}
 
 	if c.shouldIgnorePod(pod) {
@@ -400,7 +394,7 @@ func (c *WatchClient) addOrUpdatePod(pod *api_v1.Pod) {
 		newPod.Attributes = c.extractPodAttributes(pod)
 	}
 	c.IpToPod[pod.Status.PodIP] = newPod
-	c.LogStreamToPod[newPod.LogStreamName] = newPod
+	c.NameToPod[newPod.Name] = newPod
 }
 
 func (c *WatchClient) forgetPod(pod *api_v1.Pod) {
