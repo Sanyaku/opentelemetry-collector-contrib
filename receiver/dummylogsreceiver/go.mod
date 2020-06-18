@@ -3,5 +3,4 @@ module github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummyl
 go 1.14
 
 require (
-
 )
