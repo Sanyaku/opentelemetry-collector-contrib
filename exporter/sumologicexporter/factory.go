@@ -19,6 +19,7 @@ package sumologicexporter
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/spf13/viper"
@@ -91,7 +92,12 @@ func (se *sumologicexporter) ConsumeLogs(ctx context.Context, ld pdata.Logs) err
 		req, _ := http.NewRequest("POST", se.config.Endpoint, bytes.NewBuffer(body.Bytes()))
 		req.Header.Add("X-Sumo-Fields", buf.String())
 		req.Header.Add("X-Sumo-Name", "otelcol")
-		client.Do(req)
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		_, err := client.Do(req)
+
+		if err != nil {
+			fmt.Printf("Error during sending data to sumo: %q\n", err)
+		}
 	}
 	return nil
 }
