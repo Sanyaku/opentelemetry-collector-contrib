@@ -77,6 +77,7 @@ type sourceTraceProcessor struct {
 	excludeContainerRegex *regexp.Regexp
 	excludeHostRegex      *regexp.Regexp
 	nextConsumer          consumer.TraceConsumer
+	nextLogConsumer       consumer.LogConsumer
 	keys                  sourceTraceKeys
 }
 
@@ -317,15 +318,18 @@ func (stp *sourceTraceProcessor) enrichPodName(atts *pdata.AttributeMap) bool {
 	//   3) post-1.11: hash in pod_template_hash and pod_parts[-2]
 
 	if atts == nil {
+		fmt.Println("no attributes")
 		return false
 	}
 	pod, found := atts.Get(stp.keys.podKey)
 	if !found {
+		fmt.Println("not found")
 		return false
 	}
 
 	podParts := strings.Split(pod.StringVal(), "-")
 	if len(podParts) < 2 {
+		fmt.Println("invalid")
 		// This is unexpected, fallback
 		return false
 	}
@@ -423,4 +427,61 @@ func (f *attributeFiller) resourceLabelValues(atts *pdata.AttributeMap) []interf
 		arr = append(arr, value.StringVal())
 	}
 	return arr
+}
+
+func newSourceLogsProcessor(next consumer.LogConsumer, cfg *Config) (*sourceTraceProcessor, error) {
+	keys := sourceTraceKeys{
+		annotationPrefix:   cfg.AnnotationPrefix,
+		containerKey:       cfg.ContainerKey,
+		namespaceKey:       cfg.NamespaceKey,
+		podIDKey:           cfg.PodIDKey,
+		podKey:             cfg.PodKey,
+		podNameKey:         cfg.PodNameKey,
+		podTemplateHashKey: cfg.PodTemplateHashKey,
+		sourceHostKey:      cfg.SourceHostKey,
+	}
+
+	return &sourceTraceProcessor{
+		nextLogConsumer:       next,
+		collector:             cfg.Collector,
+		keys:                  keys,
+		source:                cfg.Source,
+		sourceHostFiller:      createSourceHostFiller(keys),
+		sourceCategoryFiller:  createSourceCategoryFiller(cfg, keys),
+		sourceNameFiller:      createSourceNameFiller(cfg, keys),
+		excludeNamespaceRegex: compileRegex(cfg.ExcludeNamespaceRegex),
+		excludeHostRegex:      compileRegex(cfg.ExcludeHostRegex),
+		excludeContainerRegex: compileRegex(cfg.ExcludeContainerRegex),
+		excludePodRegex:       compileRegex(cfg.ExcludePodRegex),
+	}, nil
+}
+
+func (stp *sourceTraceProcessor) ConsumeLogs(ctx context.Context, td pdata.Logs) error {
+	rss := td.ResourceLogs()
+	for i := 0; i < rss.Len(); i++ {
+		rs := rss.At(i)
+		if rs.IsNil() {
+			continue
+		}
+
+		res := rs.Resource()
+		filledAnySource := false
+
+		if !res.IsNil() {
+			atts := res.Attributes()
+
+			stp.enrichPodName(&atts)
+			stp.fillOtherMeta(atts)
+
+			filledAnySource = stp.sourceHostFiller.fillResourceOrUseAnnotation(&atts, stp.annotationAttribute(sourceHostSpecialAnnotation), stp.keys) || filledAnySource
+			filledAnySource = stp.sourceCategoryFiller.fillResourceOrUseAnnotation(&atts, stp.annotationAttribute(sourceCategorySpecialAnnotation), stp.keys) || filledAnySource
+			filledAnySource = stp.sourceNameFiller.fillResourceOrUseAnnotation(&atts, stp.annotationAttribute(sourceNameSpecialAnnotation), stp.keys) || filledAnySource
+
+			if stp.isFilteredOut(atts) {
+				rs.Logs().Resize(0)
+			}
+
+		}
+	}
+	return stp.nextLogConsumer.ConsumeLogs(ctx, td)
 }
