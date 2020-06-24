@@ -77,17 +77,19 @@ func (s *Server) Start() {
 		resources.Resize(1)
 		resources.At(0).Logs().Resize(len(logs))
 
+		flogs.ResourceLogs().At(0).Resource().InitEmpty()
+		attributes := flogs.ResourceLogs().At(0).Resource().Attributes()
+		if len(details) == 1 && len(details[0]) == 5 {
+			attributes.InsertString("k8s.pod.name", details[0][1])
+			attributes.InsertString("pod_name", details[0][1])
+			attributes.InsertString("namespace", details[0][2])
+			attributes.InsertString("container_name", details[0][3])
+			attributes.InsertString("docker_id", details[0][4])
+		}
+
 		for i, log := range logs {
 			nlogs := resources.At(0).Logs().At(i)
-			attributes := nlogs.Attributes()
 			nlogs.SetBody(log.Log)
-			// nlogs.SetTimestamp(log.Date)
-			if len(details) == 1 && len(details[0]) == 5 {
-				attributes.InsertString("pod_name", details[0][1])
-				attributes.InsertString("namespace", details[0][2])
-				attributes.InsertString("container_name", details[0][3])
-				attributes.InsertString("docker_id", details[0][4])
-			}
 		}
 		s.nextConsumer.ConsumeLogs(s.ctx, flogs)
 	})
