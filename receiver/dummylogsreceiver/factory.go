@@ -61,7 +61,7 @@ func (s *Server) Start() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		buf := new(strings.Builder)
 		io.Copy(buf, r.Body)
-		var logs []Log
+		var logs []map[string]interface{}
 		text := buf.String()
 		bytes := []byte(text)
 
@@ -89,7 +89,9 @@ func (s *Server) Start() {
 
 		for i, log := range logs {
 			nlogs := resources.At(0).Logs().At(i)
-			nlogs.SetBody(log.Log)
+			for name, value := range log {
+				nlogs.Attributes().InsertString(name, value.(string))
+			}
 		}
 		s.nextConsumer.ConsumeLogs(s.ctx, flogs)
 	})
