@@ -29,6 +29,7 @@ import (
 
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/config/configerror"
 	"go.opentelemetry.io/collector/config/configmodels"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/pdata"
@@ -42,6 +43,7 @@ const (
 
 // Factory is the factory for Jaeger legacy receiver.
 type Factory struct {
+	receiver *dummylogsReceiver
 }
 
 type Log struct {
@@ -50,15 +52,16 @@ type Log struct {
 }
 
 type Server struct {
-	port         int
-	address      string
-	protocol     string
-	nextConsumer consumer.LogConsumer
-	ctx          context.Context
+	port     int
+	address  string
+	protocol string
+	receiver *dummylogsReceiver
+	ctx      context.Context
 }
 
-func (s *Server) Start() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+func (s *Server) StartLogsServer() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		buf := new(strings.Builder)
 		io.Copy(buf, r.Body)
 		var logs []map[string]interface{}
@@ -93,10 +96,22 @@ func (s *Server) Start() {
 				nlogs.Attributes().InsertString(name, value.(string))
 			}
 		}
-		s.nextConsumer.ConsumeLogs(s.ctx, flogs)
+		s.receiver.LogConsumer.ConsumeLogs(s.ctx, flogs)
 	})
 
-	log.Fatal(http.ListenAndServe(":24284", nil))
+	log.Fatal(http.ListenAndServe(":24284", mux))
+}
+
+func (s *Server) StartMetricsServer() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		buf := new(strings.Builder)
+		io.Copy(buf, r.Body)
+		text := buf.String()
+		fmt.Printf("Message: %s\n", text)
+	})
+
+	log.Fatal(http.ListenAndServe(":24285", mux))
 }
 
 func (s *Server) handleRequest(conn net.Conn) {
@@ -114,19 +129,15 @@ func (s *Server) handleRequest(conn net.Conn) {
 }
 
 type dummylogsReceiver struct {
-	config      *Config
-	logger      *zap.Logger
-	LogConsumer consumer.LogConsumer
+	config          *Config
+	logger          *zap.Logger
+	LogConsumer     consumer.LogConsumer
+	MetricsConsumer consumer.MetricsConsumerOld
 }
 
 // Type gets the type of the Receiver config created by this factory.
 func (f *Factory) Type() configmodels.Type {
 	return configmodels.Type(typeStr)
-}
-
-func (f *Factory) generator(ctx context.Context, consumer consumer.LogConsumer) {
-	server := Server{24284, "0.0.0.0", "tcp", consumer, ctx}
-	go server.Start()
 }
 
 // CreateDefaultConfig creates the default configuration for JaegerLegacy receiver.
@@ -157,9 +168,15 @@ func (f *Factory) createReceiver(
 	config *Config,
 ) (component.LogReceiver, error) {
 
+	if f.receiver != nil {
+		return f.receiver, nil
+	}
+
 	r := &dummylogsReceiver{
 		config: config,
 	}
+
+	f.receiver = r
 
 	return r, nil
 }
@@ -174,6 +191,32 @@ func (f *Factory) CreateLogReceiver(
 	receiver, _ := f.createReceiver(rCfg)
 	receiver.(*dummylogsReceiver).LogConsumer = nextConsumer
 
-	go f.generator(ctx, nextConsumer)
+	server := Server{24284, "0.0.0.0", "tcp", receiver.(*dummylogsReceiver), ctx}
+	go server.StartLogsServer()
 	return receiver, nil
+}
+
+func (f *Factory) CreateMetricsReceiver(
+	ctx context.Context,
+	logger *zap.Logger,
+	cfg configmodels.Receiver,
+	nextConsumer consumer.MetricsConsumerOld,
+) (component.MetricsReceiver, error) {
+	rCfg := cfg.(*Config)
+	receiver, _ := f.createReceiver(rCfg)
+	receiver.(*dummylogsReceiver).MetricsConsumer = nextConsumer
+
+	server := Server{24285, "0.0.0.0", "tcp", receiver.(*dummylogsReceiver), ctx}
+	go server.StartMetricsServer()
+	return receiver, nil
+}
+
+func (f *Factory) CreateTraceReceiver(
+	ctx context.Context,
+	logger *zap.Logger,
+	cfg configmodels.Receiver,
+	nextConsumer consumer.TraceConsumerOld,
+) (component.TraceReceiver, error) {
+	// No trace receiver for now.
+	return nil, configerror.ErrDataTypeIsNotSupported
 }

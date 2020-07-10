@@ -43,6 +43,8 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/tcnksm/ghr v0.13.0
 	go.opentelemetry.io/collector v0.5.0
+	github.com/gogo/protobuf v1.3.1
+	google.golang.org/protobuf v1.25.0 // indirect
 	honnef.co/go/tools v0.0.1-2020.1.3
 )
 
