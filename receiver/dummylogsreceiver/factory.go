@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.uber.org/zap"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummylogsreceiver/protobuf"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummylogsreceiver/prompb"
 )
 
 const (
@@ -112,7 +112,7 @@ func (s *Server) StartMetricsServer() {
 		io.Copy(buf, r.Body)
 		text := buf.String()
 		bytes := []byte(text)
-		request := &protobuf.WriteRequest{}
+		request := &prompb.WriteRequest{}
 		if err := proto.Unmarshal(bytes, request); err != nil {
 			log.Printf("Failed to parse prometheus request %s", err)
 		} else {
