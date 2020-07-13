@@ -103,6 +103,8 @@ github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200710093527-af5c42d3b5a
 github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200710093527-af5c42d3b5ad/go.mod h1:/YIsu0aIh8uhClFEl+3AMDMVFCqMaghes9NmDd76Q5A=
 github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200710094328-cde23d598983 h1:lcfT71aan9c9wxxM4Y8vt+9FLyImjQXKyco+6bQn0rs=
 github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200710094328-cde23d598983/go.mod h1:/YIsu0aIh8uhClFEl+3AMDMVFCqMaghes9NmDd76Q5A=
+github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200713145303-fe09b02de785 h1:+1MoFdWRYZXUDwZ21/HAvnBi4HUBn8x/edniu/COpBA=
+github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200713145303-fe09b02de785/go.mod h1:/YIsu0aIh8uhClFEl+3AMDMVFCqMaghes9NmDd76Q5A=
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
 github.com/VividCortex/gohistogram v1.0.0/go.mod h1:Pf5mBqqDxYaXu3hDrrU+w6nw50o/4+TcAqDqk/vUH7g=
 github.com/agnivade/levenshtein v1.0.1/go.mod h1:CURSv5d9Uaml+FovSIICkLbAUZ9S4RqaHDIsdSBg7lM=
@@ -603,6 +605,7 @@ github.com/golang/protobuf v1.4.1/go.mod h1:U8fpvMrcmy5pZrNK1lt4xCsGvpyWQ/VVv6QD
 github.com/golang/protobuf v1.4.2 h1:+Z5KGCizgyZCbGh1KZqA0fcLLkwbsjIzS4aV2v7wJX0=
 github.com/golang/snappy v0.0.0-20170215233205-553a64147049/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
+github.com/golang/snappy v0.0.1 h1:Qgr9rKW7uDUkrbSmQeiDsGa8SjGyCOGtuasMWwvp2P4=
 github.com/golang/snappy v0.0.1/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/golangci/check v0.0.0-20180506172741-cfe4005ccda2/go.mod h1:k9Qvh+8juN+UKMCS/3jFtGICgW8O96FVaZsaxdzDkR4=
 github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a/go.mod h1:ryS0uhF+x9jgbj/N71xsEqODy9BN81/GonCZiOzirOk=

@@ -48,7 +48,7 @@ require (
 	honnef.co/go/tools v0.0.1-2020.1.3
 )
 
-replace go.opentelemetry.io/collector => github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200710094328-cde23d598983
+replace go.opentelemetry.io/collector => github.com/SumoLogic/opentelemetry-collector v0.2.7-0.20200713145303-fe09b02de785
 
 replace git.apache.org/thrift.git v0.12.0 => github.com/apache/thrift v0.12.0
 

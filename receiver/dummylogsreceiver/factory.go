@@ -21,22 +21,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"regexp"
 	"strings"
-	
+
+	metricspb "github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1"
+	resourcepb "github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/snappy"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummylogsreceiver/prompb"
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configerror"
 	"go.opentelemetry.io/collector/config/configmodels"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/consumer/consumerdata"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.uber.org/zap"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummylogsreceiver/prompb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -108,15 +113,51 @@ func (s *Server) StartLogsServer() {
 func (s *Server) StartMetricsServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		buf := new(strings.Builder)
-		io.Copy(buf, r.Body)
-		text := buf.String()
-		bytes := []byte(text)
+		// buf := new(strings.Builder)
+		// io.Copy(buf, r.Body)
+		// text := buf.String()
+		// bytes := []byte(text)
+		in, _ := ioutil.ReadFile("/Users/drosiek/projects/perf-tests/data/1594631792.2735972_975942.data")
+		in, _ = snappy.Decode(nil, in)
 		request := &prompb.WriteRequest{}
-		if err := proto.Unmarshal(bytes, request); err != nil {
+		if err := proto.Unmarshal(in, request); err != nil {
 			log.Printf("Failed to parse prometheus request %s", err)
 		} else {
-			fmt.Println("Success!!!")
+			for _, metric := range request.Timeseries {
+				// metric := request.Timeseries[0]
+				md := consumerdata.MetricsData{}
+	
+				// Inject metric labels
+				md.Resource = &resourcepb.Resource{
+					Labels: map[string]string{},
+				}
+				for _, label := range metric.Labels {
+					md.Resource.Labels[label.Name] = label.Value
+				}
+	
+				md.Metrics = []*metricspb.Metric{
+					{
+						MetricDescriptor: &metricspb.MetricDescriptor{
+							Name: md.Resource.Labels["__name__"],
+							Type: metricspb.MetricDescriptor_GAUGE_DOUBLE,
+						},
+						Timeseries: make([]*metricspb.TimeSeries, 1),
+					},
+				}
+
+				md.Metrics[0].Timeseries[0] = &metricspb.TimeSeries{
+					Points: make([]*metricspb.Point, len(metric.Samples)),
+				}
+
+				for j, point := range metric.Samples {
+					fmt.Println("We have sample!!!")
+					md.Metrics[0].Timeseries[0].Points[j] = &metricspb.Point{
+						Value:     &metricspb.Point_DoubleValue{DoubleValue: point.Value},
+						Timestamp: &timestamppb.Timestamp{Seconds: point.Timestamp / 1e3, Nanos: int32((point.Timestamp % 1e3) * 1e6)},
+					}
+				}
+				s.receiver.MetricsConsumer.ConsumeMetricsData(s.ctx, md)
+			}
 		}
 	})
 
