@@ -26,7 +26,8 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-
+	
+	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configerror"
@@ -34,6 +35,8 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.uber.org/zap"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummylogsreceiver/protobuf"
 )
 
 const (
@@ -108,7 +111,13 @@ func (s *Server) StartMetricsServer() {
 		buf := new(strings.Builder)
 		io.Copy(buf, r.Body)
 		text := buf.String()
-		fmt.Printf("Message: %s\n", text)
+		bytes := []byte(text)
+		request := &protobuf.WriteRequest{}
+		if err := proto.Unmarshal(bytes, request); err != nil {
+			log.Printf("Failed to parse prometheus request %s", err)
+		} else {
+			fmt.Println("Success!!!")
+		}
 	})
 
 	log.Fatal(http.ListenAndServe(":24285", mux))

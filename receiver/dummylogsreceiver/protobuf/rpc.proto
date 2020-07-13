@@ -19,7 +19,7 @@ import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 import "gogoproto/gogo.proto";
 
-option go_package = "prompb";
+option go_package = "protobuf";
 
 option (gogoproto.sizer_all) = true;
 option (gogoproto.marshaler_all) = true;
