@@ -21,18 +21,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
+	commonpb "github.com/census-instrumentation/opencensus-proto/gen-go/agent/common/v1"
 	metricspb "github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1"
 	resourcepb "github.com/census-instrumentation/opencensus-proto/gen-go/resource/v1"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/snappy"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummylogsreceiver/prompb"
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configerror"
@@ -42,6 +42,8 @@ import (
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/dummylogsreceiver/prompb"
 )
 
 const (
@@ -113,20 +115,25 @@ func (s *Server) StartLogsServer() {
 func (s *Server) StartMetricsServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// buf := new(strings.Builder)
-		// io.Copy(buf, r.Body)
-		// text := buf.String()
-		// bytes := []byte(text)
-		in, _ := ioutil.ReadFile("/Users/drosiek/projects/perf-tests/data/1594631792.2735972_975942.data")
-		in, _ = snappy.Decode(nil, in)
+		contentLength, _ := strconv.Atoi(r.Header.Get("Content-Length"))
+		in := make([]byte, contentLength)
+		count, _ := r.Body.Read(in)
+		if count != contentLength {
+			log.Printf("Received more data than processed")
+			return
+		}
+		in, err := snappy.Decode(nil, in)
+		if err != nil {
+			log.Printf("Failed to decode request %s", err)
+			return
+		}
 		request := &prompb.WriteRequest{}
 		if err := proto.Unmarshal(in, request); err != nil {
 			log.Printf("Failed to parse prometheus request %s", err)
 		} else {
 			for _, metric := range request.Timeseries {
-				// metric := request.Timeseries[0]
 				md := consumerdata.MetricsData{}
-	
+
 				// Inject metric labels
 				md.Resource = &resourcepb.Resource{
 					Labels: map[string]string{},
@@ -134,7 +141,11 @@ func (s *Server) StartMetricsServer() {
 				for _, label := range metric.Labels {
 					md.Resource.Labels[label.Name] = label.Value
 				}
-	
+
+				md.Node = &commonpb.Node{
+					Identifier: &commonpb.ProcessIdentifier{HostName: strings.Split(md.Resource.Labels["instance"], ":")[0]},
+				}
+
 				md.Metrics = []*metricspb.Metric{
 					{
 						MetricDescriptor: &metricspb.MetricDescriptor{
@@ -150,7 +161,6 @@ func (s *Server) StartMetricsServer() {
 				}
 
 				for j, point := range metric.Samples {
-					fmt.Println("We have sample!!!")
 					md.Metrics[0].Timeseries[0].Points[j] = &metricspb.Point{
 						Value:     &metricspb.Point_DoubleValue{DoubleValue: point.Value},
 						Timestamp: &timestamppb.Timestamp{Seconds: point.Timestamp / 1e3, Nanos: int32((point.Timestamp % 1e3) * 1e6)},

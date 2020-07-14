@@ -43,7 +43,7 @@ type kubernetesprocessor struct {
 	rules               kube.ExtractionRules
 	filters             kube.Filters
 	nextTraceConsumer   consumer.TraceConsumer
-	logConsumer     consumer.LogConsumer
+	logConsumer         consumer.LogConsumer
 	nextMetricsConsumer consumer.MetricsConsumer
 }
 
