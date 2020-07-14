@@ -21,10 +21,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configmodels"
+	"go.opentelemetry.io/collector/consumer/consumerdata"
 	"go.opentelemetry.io/collector/consumer/pdata"
 	"go.uber.org/zap"
 )
@@ -36,11 +39,14 @@ const (
 
 // Factory is the factory for Jaeger legacy receiver.
 type Factory struct {
+	exporter component.LogExporter
 }
 
 type sumologicexporter struct {
-	config *Config
-	logger *zap.Logger
+	config          *Config
+	logger          *zap.Logger
+	metrics         []string
+	metrics_counter int
 }
 
 // Type gets the type of the Receiver config created by this factory.
@@ -102,14 +108,65 @@ func (se *sumologicexporter) ConsumeLogs(ctx context.Context, ld pdata.Logs) err
 	return nil
 }
 
+func (se *sumologicexporter) AddPrometheusLine(name string, ts *timestamp.Timestamp, value float64, labels map[string]string) {
+	labelsFmt := make([]string, len(labels))
+	i := 0
+
+	for name, label := range labels {
+		labelsFmt[i] = fmt.Sprintf("%s=%s", name, label)
+		i += 1
+	}
+
+	se.metrics[se.metrics_counter] = fmt.Sprintf("%s{%s,_client=kubernetes} %f %d.%d", name, strings.Join(labelsFmt, ","), value, ts.GetSeconds(), ts.GetNanos())
+	se.metrics_counter += 1
+	if se.metrics_counter == len(se.metrics) {
+		// Flush buffer
+		client := &http.Client{}
+		req, _ := http.NewRequest("POST", se.config.Endpoint, bytes.NewBuffer([]byte(strings.Join(se.metrics, "\n"))))
+		req.Header.Add("X-Sumo-Name", "otelcol")
+		req.Header.Add("Content-Type", "application/vnd.sumologic.prometheus")
+		_, err := client.Do(req)
+
+		if err != nil {
+			fmt.Printf("Error during sending data to sumo: %q\n", err)
+		}
+
+		se.metrics_counter = 0
+	}
+}
+
+func (se *sumologicexporter) ConsumeMetricsData(ctx context.Context, md consumerdata.MetricsData) error {
+	for i := 0; i < len(md.Metrics); i++ {
+		metric := md.Metrics[i]
+		metric_name := md.Resource.Labels["__name__"]
+
+		for j := 0; j < len(metric.GetTimeseries()); j++ {
+			serie := metric.GetTimeseries()[j]
+			for k := 0; k < len(serie.GetPoints()); k++ {
+				point := serie.GetPoints()[k]
+				se.AddPrometheusLine(metric_name, point.GetTimestamp(), point.GetDoubleValue(), md.Resource.GetLabels())
+			}
+		}
+	}
+	return nil
+}
+
+func (se *sumologicexporter) ConsumeTraces(ctx context.Context, ld pdata.Traces) error {
+
+	return nil
+}
+
 func (f *Factory) createExporter(
 	config *Config,
 ) (component.LogExporter, error) {
-	r := &sumologicexporter{
-		config: config,
+	if f.exporter == nil {
+		f.exporter = &sumologicexporter{
+			config: config,
+			metrics: make([]string, 50),
+		}
 	}
 
-	return r, nil
+	return f.exporter, nil
 }
 
 func (f *Factory) CreateLogExporter(
@@ -120,5 +177,25 @@ func (f *Factory) CreateLogExporter(
 	rCfg := cfg.(*Config)
 	exporter, _ := f.createExporter(rCfg)
 
-	return exporter, nil
+	return exporter.(component.LogExporter), nil
+}
+
+func (f *Factory) CreateMetricsExporter(
+	logger *zap.Logger,
+	cfg configmodels.Exporter,
+) (component.MetricsExporterOld, error) {
+	rCfg := cfg.(*Config)
+	exporter, _ := f.createExporter(rCfg)
+
+	return exporter.(component.MetricsExporterOld), nil
+}
+
+func (f *Factory) CreateTraceExporter(
+	logger *zap.Logger,
+	cfg configmodels.Exporter,
+) (component.TraceExporterOld, error) {
+	rCfg := cfg.(*Config)
+	exporter, _ := f.createExporter(rCfg)
+
+	return exporter.(component.TraceExporterOld), nil
 }
