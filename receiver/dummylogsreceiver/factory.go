@@ -117,12 +117,12 @@ func (s *Server) StartMetricsServer() {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		contentLength, _ := strconv.Atoi(r.Header.Get("Content-Length"))
 		in := make([]byte, contentLength)
-		count, _ := r.Body.Read(in)
+		count, err := r.Body.Read(in)
 		if count != contentLength {
-			log.Printf("Received more data than processed")
+			log.Printf("Received more data than processed: %d of %d: %q\n", count, contentLength, err)
 			return
 		}
-		in, err := snappy.Decode(nil, in)
+		in, err = snappy.Decode(nil, in)
 		if err != nil {
 			log.Printf("Failed to decode request %s", err)
 			return

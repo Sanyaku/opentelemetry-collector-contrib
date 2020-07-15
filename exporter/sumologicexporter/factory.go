@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/spf13/viper"
@@ -47,6 +48,7 @@ type sumologicexporter struct {
 	logger          *zap.Logger
 	metrics         []string
 	metrics_counter int
+	mutex           *sync.Mutex
 }
 
 // Type gets the type of the Receiver config created by this factory.
@@ -113,16 +115,18 @@ func (se *sumologicexporter) AddPrometheusLine(name string, ts *timestamp.Timest
 	i := 0
 
 	for name, label := range labels {
-		labelsFmt[i] = fmt.Sprintf("%s=%s", name, label)
+		labelsFmt[i] = fmt.Sprintf("%s=\"%s\"", name, label)
 		i += 1
 	}
 
-	se.metrics[se.metrics_counter] = fmt.Sprintf("%s{%s,_client=kubernetes} %f %d.%d", name, strings.Join(labelsFmt, ","), value, ts.GetSeconds(), ts.GetNanos())
+	metric := fmt.Sprintf("%s{%s,_client=\"kubernetes\"} %f %d.%d", name, strings.Join(labelsFmt, ","), value, ts.GetSeconds(), ts.GetNanos())
+	se.mutex.Lock()
+	se.metrics[se.metrics_counter] = metric
 	se.metrics_counter += 1
 	if se.metrics_counter == len(se.metrics) {
 		// Flush buffer
 		client := &http.Client{}
-		req, _ := http.NewRequest("POST", se.config.Endpoint, bytes.NewBuffer([]byte(strings.Join(se.metrics, "\n"))))
+		req, _ := http.NewRequest("POST", se.config.Endpoint, bytes.NewBuffer([]byte(metric)))
 		req.Header.Add("X-Sumo-Name", "otelcol")
 		req.Header.Add("Content-Type", "application/vnd.sumologic.prometheus")
 		_, err := client.Do(req)
@@ -133,6 +137,8 @@ func (se *sumologicexporter) AddPrometheusLine(name string, ts *timestamp.Timest
 
 		se.metrics_counter = 0
 	}
+
+	se.mutex.Unlock()
 }
 
 func (se *sumologicexporter) ConsumeMetricsData(ctx context.Context, md consumerdata.MetricsData) error {
@@ -161,8 +167,9 @@ func (f *Factory) createExporter(
 ) (component.LogExporter, error) {
 	if f.exporter == nil {
 		f.exporter = &sumologicexporter{
-			config: config,
-			metrics: make([]string, 50),
+			config:  config,
+			metrics: make([]string, 500),
+			mutex:   &sync.Mutex{},
 		}
 	}
 
