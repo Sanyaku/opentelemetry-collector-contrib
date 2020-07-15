@@ -119,14 +119,14 @@ func (se *sumologicexporter) AddPrometheusLine(name string, ts *timestamp.Timest
 		i += 1
 	}
 
-	metric := fmt.Sprintf("%s{%s,_client=\"kubernetes\"} %f %d.%d", name, strings.Join(labelsFmt, ","), value, ts.GetSeconds(), ts.GetNanos())
+	metric := fmt.Sprintf("%s{%s,_client=\"kubernetes\"} %f %d", name, strings.Join(labelsFmt, ","), value, ts.GetSeconds()*1e3+int64(ts.GetNanos()/1e6))
 	se.mutex.Lock()
 	se.metrics[se.metrics_counter] = metric
 	se.metrics_counter += 1
 	if se.metrics_counter == len(se.metrics) {
 		// Flush buffer
 		client := &http.Client{}
-		req, _ := http.NewRequest("POST", se.config.Endpoint, bytes.NewBuffer([]byte(metric)))
+		req, _ := http.NewRequest("POST", se.config.Endpoint, bytes.NewBuffer([]byte(strings.Join(se.metrics, "\n"))))
 		req.Header.Add("X-Sumo-Name", "otelcol")
 		req.Header.Add("Content-Type", "application/vnd.sumologic.prometheus")
 		_, err := client.Do(req)
@@ -168,7 +168,7 @@ func (f *Factory) createExporter(
 	if f.exporter == nil {
 		f.exporter = &sumologicexporter{
 			config:  config,
-			metrics: make([]string, 500),
+			metrics: make([]string, 1024),
 			mutex:   &sync.Mutex{},
 		}
 	}
