@@ -18,13 +18,12 @@ import (
 	"go.opentelemetry.io/collector/config/configmodels"
 )
 
-// The config field name to load the protocol map from
-const protocolsFieldName = "protocols"
-
 // Config defines configuration for Jaeger receiver.
 type Config struct {
-	TypeVal   configmodels.Type                    `mapstructure:"-"`
-	NameVal   string                               `mapstructure:"-"`
+	TypeVal     configmodels.Type `mapstructure:"-"`
+	NameVal     string            `mapstructure:"-"`
+	MetricsPort int               `mapstructure:"metrics_port"`
+	LogsPort    int               `mapstructure:"logs_port"`
 }
 
 // Name gets the receiver name.

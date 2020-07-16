@@ -48,7 +48,7 @@ import (
 
 const (
 	// The value of "type" key in configuration.
-	typeStr = "dummylogs"
+	typeStr = "sumologic"
 )
 
 // Factory is the factory for Jaeger legacy receiver.
@@ -62,11 +62,12 @@ type Log struct {
 }
 
 type Server struct {
-	port     int
-	address  string
-	protocol string
-	receiver *dummylogsReceiver
-	ctx      context.Context
+	logsPort    int
+	metricsPort int
+	address     string
+	protocol    string
+	receiver    *dummylogsReceiver
+	ctx         context.Context
 }
 
 func (s *Server) StartLogsServer() {
@@ -83,7 +84,6 @@ func (s *Server) StartLogsServer() {
 
 		regex := regexp.MustCompile(`\.containers\.([^_]+)_([^_]+)_(.+)-([a-z0-9]{64})\.log$`)
 		details := regex.FindAllStringSubmatch(tag, -1)
-		fmt.Printf("%q", details)
 
 		flogs := pdata.NewLogs()
 		resources := flogs.ResourceLogs()
@@ -109,7 +109,7 @@ func (s *Server) StartLogsServer() {
 		s.receiver.LogConsumer.ConsumeLogs(s.ctx, flogs)
 	})
 
-	log.Fatal(http.ListenAndServe(":24284", mux))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.logsPort), mux))
 }
 
 func (s *Server) StartMetricsServer() {
@@ -175,7 +175,7 @@ func (s *Server) StartMetricsServer() {
 		}
 	})
 
-	log.Fatal(http.ListenAndServe(":24285", mux))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.metricsPort), mux))
 }
 
 func (s *Server) handleRequest(conn net.Conn) {
@@ -193,7 +193,7 @@ func (s *Server) handleRequest(conn net.Conn) {
 }
 
 type dummylogsReceiver struct {
-	config          *Config
+	Config          *Config
 	logger          *zap.Logger
 	LogConsumer     consumer.LogConsumer
 	MetricsConsumer consumer.MetricsConsumerOld
@@ -237,7 +237,7 @@ func (f *Factory) createReceiver(
 	}
 
 	r := &dummylogsReceiver{
-		config: config,
+		Config: config,
 	}
 
 	f.receiver = r
@@ -252,10 +252,19 @@ func (f *Factory) CreateLogReceiver(
 	nextConsumer consumer.LogConsumer,
 ) (component.LogReceiver, error) {
 	rCfg := cfg.(*Config)
+	// It doesn't read from yaml for some reason
+	rCfg.MetricsPort = 14267
+	rCfg.LogsPort = 14268
 	receiver, _ := f.createReceiver(rCfg)
 	receiver.(*dummylogsReceiver).LogConsumer = nextConsumer
-
-	server := Server{24284, "0.0.0.0", "tcp", receiver.(*dummylogsReceiver), ctx}
+	server := Server{
+		receiver.(*dummylogsReceiver).Config.LogsPort,
+		receiver.(*dummylogsReceiver).Config.MetricsPort,
+		"0.0.0.0",
+		"tcp",
+		receiver.(*dummylogsReceiver),
+		ctx,
+	}
 	go server.StartLogsServer()
 	return receiver, nil
 }
@@ -267,10 +276,20 @@ func (f *Factory) CreateMetricsReceiver(
 	nextConsumer consumer.MetricsConsumerOld,
 ) (component.MetricsReceiver, error) {
 	rCfg := cfg.(*Config)
+	// It doesn't read from yaml for some reason
+	rCfg.MetricsPort = 14267
+	rCfg.LogsPort = 14268
 	receiver, _ := f.createReceiver(rCfg)
 	receiver.(*dummylogsReceiver).MetricsConsumer = nextConsumer
 
-	server := Server{24285, "0.0.0.0", "tcp", receiver.(*dummylogsReceiver), ctx}
+	server := Server{
+		receiver.(*dummylogsReceiver).Config.LogsPort,
+		receiver.(*dummylogsReceiver).Config.MetricsPort,
+		"0.0.0.0",
+		"tcp",
+		receiver.(*dummylogsReceiver),
+		ctx,
+	}
 	go server.StartMetricsServer()
 	return receiver, nil
 }
