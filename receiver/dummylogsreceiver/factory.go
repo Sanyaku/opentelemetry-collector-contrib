@@ -27,6 +27,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	commonpb "github.com/census-instrumentation/opencensus-proto/gen-go/agent/common/v1"
 	metricspb "github.com/census-instrumentation/opencensus-proto/gen-go/metrics/v1"
@@ -61,6 +62,13 @@ type Log struct {
 	Log  string
 }
 
+// Limit maximum number of open connections to prevent OOM
+type RequestLimiter struct {
+	Current int
+	Max   	int
+	Mux 	sync.Mutex
+}
+
 type Server struct {
 	logsPort    int
 	metricsPort int
@@ -68,6 +76,7 @@ type Server struct {
 	protocol    string
 	receiver    *dummylogsReceiver
 	ctx         context.Context
+	limiter 	*RequestLimiter
 }
 
 func (s *Server) StartLogsServer() {
@@ -115,6 +124,15 @@ func (s *Server) StartLogsServer() {
 func (s *Server) StartMetricsServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		s.limiter.Mux.Lock()
+		if s.limiter.Current >= s.limiter.Max {
+			s.limiter.Mux.Unlock()
+            http.Error(w, http.StatusText(429), http.StatusTooManyRequests)
+            return
+		}
+		s.limiter.Current += 1
+		s.limiter.Mux.Unlock()
+
 		contentLength, _ := strconv.Atoi(r.Header.Get("Content-Length"))
 		in := make([]byte, contentLength)
 		totalCount := 0
@@ -173,6 +191,9 @@ func (s *Server) StartMetricsServer() {
 				s.receiver.MetricsConsumer.ConsumeMetricsData(s.ctx, md)
 			}
 		}
+		s.limiter.Mux.Lock()
+		s.limiter.Current -= 1
+		s.limiter.Mux.Unlock()
 	})
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", s.metricsPort), mux))
@@ -264,6 +285,10 @@ func (f *Factory) CreateLogReceiver(
 		"tcp",
 		receiver.(*dummylogsReceiver),
 		ctx,
+		&RequestLimiter{
+			Current: 0,
+			Max: 100,
+		},
 	}
 	go server.StartLogsServer()
 	return receiver, nil
@@ -289,6 +314,10 @@ func (f *Factory) CreateMetricsReceiver(
 		"tcp",
 		receiver.(*dummylogsReceiver),
 		ctx,
+		&RequestLimiter{
+			Current: 0,
+			Max: 100,
+		},
 	}
 	go server.StartMetricsServer()
 	return receiver, nil
