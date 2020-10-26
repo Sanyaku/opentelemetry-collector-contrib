@@ -298,6 +298,7 @@ func (se *sumologicexporter) send(pipeline string, body string, fields string) e
 		req.Header.Add("X-Sumo-Fields", fields)
 	} else if pipeline == MetricsPipeline {
 		// ToDo: Implement metrics pipeline
+		return errors.New("Current sender version doesn't support metrics")
 	} else {
 		return errors.New("Unexpected pipeline")
 	}
