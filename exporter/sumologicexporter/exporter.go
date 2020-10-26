@@ -262,11 +262,12 @@ func (se *sumologicexporter) sendLogsJSONFormat(buffer []pdata.LogRecord, fields
 }
 
 func (se *sumologicexporter) sendLogs(buffer []pdata.LogRecord, fields string) error {
-	if se.config.LogFormat == TextFormat {
+	switch se.config.LogFormat {
+	case TextFormat:
 		return se.sendLogsTextFormat(buffer, fields)
-	} else if se.config.LogFormat == JSONFormat {
+	case JSONFormat:
 		return se.sendLogsJSONFormat(buffer, fields)
-	} else {
+	default:
 		return errors.New("Unexpected log format")
 	}
 }
