@@ -43,6 +43,14 @@ type sumologicexporter struct {
 	client          *http.Client
 }
 
+type sender struct {
+	buffer            []pdata.LogRecord
+	previousMetadata  string
+	currentMetadata   string
+	errs              []error
+	droppedTimeSeries int
+}
+
 func newLogsExporter(
 	cfg *Config,
 ) (component.LogsExporter, error) {
@@ -137,25 +145,22 @@ func (se *sumologicexporter) GetMetadata(attributes pdata.AttributeMap) string {
 
 // This function tries to send data and eventually appends error in case of failure
 // It modifies buffer, droppedTimeSeries and errs
-func (se *sumologicexporter) sendAndPushErrors(buffer *[]pdata.LogRecord, fields string, droppedTimeSeries *int, errs *[]error) {
+func (se *sumologicexporter) sendAndPushErrors(sdr *sender) {
 
-	err := se.sendLogs(*buffer, fields)
+	err := se.sendLogs(sdr.buffer, sdr.previousMetadata)
 	if err != nil {
-		*droppedTimeSeries += len(*buffer)
-		*errs = append(*errs, err)
+		sdr.droppedTimeSeries += len(sdr.buffer)
+		sdr.errs = append(sdr.errs, err)
 	}
 
-	*buffer = (*buffer)[:0]
+	sdr.buffer = (sdr.buffer)[:0]
 }
 
 // pushLogsData groups data with common metadata uses sendAndPushErrors to send data to sumologic
 func (se *sumologicexporter) pushLogsData(ctx context.Context, ld pdata.Logs) (droppedTimeSeries int, err error) {
-	var (
-		buffer           []pdata.LogRecord = make([]pdata.LogRecord, 0, maxBufferSize)
-		previousMetadata string
-		currentMetadata  string
-		errs             []error
-	)
+	sdr := &sender{
+		buffer: make([]pdata.LogRecord, 0, maxBufferSize),
+	}
 
 	// Iterate over ResourceLogs
 	for i := 0; i < ld.ResourceLogs().Len(); i++ {
@@ -168,31 +173,31 @@ func (se *sumologicexporter) pushLogsData(ctx context.Context, ld pdata.Logs) (d
 			// iterate over Logs
 			for k := 0; k < library.Logs().Len(); k++ {
 				log := library.Logs().At(k)
-				currentMetadata = se.GetMetadata(log.Attributes())
+				sdr.currentMetadata = se.GetMetadata(log.Attributes())
 
 				// If metadate differs from currently buffered, flush the buffer
-				if currentMetadata != previousMetadata && previousMetadata != "" {
-					se.sendAndPushErrors(&buffer, previousMetadata, &droppedTimeSeries, &errs)
+				if sdr.currentMetadata != sdr.previousMetadata && sdr.previousMetadata != "" {
+					se.sendAndPushErrors(sdr)
 				}
 
 				// assign metadata
-				previousMetadata = currentMetadata
+				sdr.previousMetadata = sdr.currentMetadata
 
 				// add log to the buffer
-				buffer = append(buffer, log)
+				sdr.buffer = append(sdr.buffer, log)
 
 				// Flush buffer to avoid overlow
-				if len(buffer) == maxBufferSize {
-					se.sendAndPushErrors(&buffer, previousMetadata, &droppedTimeSeries, &errs)
+				if len(sdr.buffer) == maxBufferSize {
+					se.sendAndPushErrors(sdr)
 				}
 			}
 		}
 	}
 
 	// Flush pending logs
-	se.sendAndPushErrors(&buffer, previousMetadata, &droppedTimeSeries, &errs)
+	se.sendAndPushErrors(sdr)
 
-	return droppedTimeSeries, componenterror.CombineErrors(errs)
+	return sdr.droppedTimeSeries, componenterror.CombineErrors(sdr.errs)
 }
 
 // appendAndSend appends line to the body and eventually sends data to avoid exceeding the request limit
