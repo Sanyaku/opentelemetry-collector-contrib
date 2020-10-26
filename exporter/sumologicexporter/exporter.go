@@ -294,13 +294,14 @@ func (se *sumologicexporter) send(pipeline string, body string, fields string) e
 		req.Header.Add("X-Sumo-Category", se.config.SourceCategory)
 	}
 
-	if pipeline == LogsPipeline {
+	switch pipeline {
+	case LogsPipeline:
 		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Add("X-Sumo-Fields", fields)
-	} else if pipeline == MetricsPipeline {
+	case MetricsPipeline:
 		// ToDo: Implement metrics pipeline
 		return errors.New("Current sender version doesn't support metrics")
-	} else {
+	default:
 		return errors.New("Unexpected pipeline")
 	}
 
