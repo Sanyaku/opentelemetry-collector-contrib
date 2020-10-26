@@ -46,7 +46,6 @@ func newLogsExporter(
 	cfg *Config,
 ) (component.LogsExporter, error) {
 	se, err := initExporter(cfg)
-
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +68,8 @@ func initExporter(cfg *Config) (*sumologicexporter, error) {
 			Timeout: cfg.TimeoutSettings.Timeout,
 		},
 	}
-	err := se.refreshMetadataRegexes()
 
+	err := se.refreshMetadataRegexes()
 	if err != nil {
 		return nil, err
 	}
@@ -82,10 +81,12 @@ func (se *sumologicexporter) refreshMetadataRegexes() error {
 	cfg := se.config
 	metadataRegexes := make([]*regexp.Regexp, len(cfg.MetadataFields))
 	for i := 0; i < len(cfg.MetadataFields); i++ {
+
 		regex, err := regexp.Compile(cfg.MetadataFields[i])
 		if err != nil {
 			return err
 		}
+
 		metadataRegexes[i] = regex
 	}
 
@@ -133,11 +134,13 @@ func (se *sumologicexporter) GetMetadata(attributes pdata.AttributeMap) string {
 // This function tries to send data and eventually appends error in case of failure
 // It modifies buffer, droppedTimeSeries and errs
 func (se *sumologicexporter) sendAndPushErrors(buffer *[]pdata.LogRecord, fields string, droppedTimeSeries *int, errs *[]error) {
+
 	err := se.sendLogs(*buffer, fields)
 	if err != nil {
 		*droppedTimeSeries += len(*buffer)
 		*errs = append(*errs, err)
 	}
+
 	*buffer = (*buffer)[:0]
 }
 
@@ -234,8 +237,8 @@ func (se *sumologicexporter) sendLogsJSONFormat(buffer []pdata.LogRecord, fields
 	for j := 0; j < len(buffer); j++ {
 		data := se.filterMetadata(buffer[j].Attributes(), true)
 		data[logKey] = buffer[j].Body().StringVal()
-		nextLine, err := json.Marshal(data)
 
+		nextLine, err := json.Marshal(data)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -272,7 +275,6 @@ func (se *sumologicexporter) sendLogs(buffer []pdata.LogRecord, fields string) e
 func (se *sumologicexporter) send(pipeline string, body string, fields string) error {
 	// Add headers
 	req, err := http.NewRequest("POST", se.config.URL, strings.NewReader(body))
-
 	if err != nil {
 		return err
 	}
@@ -301,7 +303,6 @@ func (se *sumologicexporter) send(pipeline string, body string, fields string) e
 	}
 
 	_, err = se.client.Do(req)
-
 	// ToDo: Add retries mechanism
 	if err != nil {
 		return err
