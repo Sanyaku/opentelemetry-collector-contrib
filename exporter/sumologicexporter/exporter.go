@@ -95,24 +95,27 @@ func (se *sumologicexporter) refreshMetadataRegexes() error {
 }
 
 // filterMetadata returns map of attributes which are (or are not, it depends on filterOut argument) metadata
+// for filterOut equals false -> return all keys which match at least one regular exporession
+// for filterOut equals true -> return all keys which do not match any regular expression
 func (se *sumologicexporter) filterMetadata(attributes pdata.AttributeMap, filterOut bool) map[string]string {
 	returnValue := make(map[string]string)
 	attributes.ForEach(func(k string, v pdata.AttributeValue) {
-		skip := !filterOut
-		for j := 0; j < len(se.metadataRegexes); j++ {
-			if se.metadataRegexes[j].MatchString(k) {
-				skip = false
-				if filterOut {
+		switch filterOut {
+		case true:
+			for _, regex := range se.metadataRegexes {
+				if regex.MatchString(k) {
+					return
+				}
+			}
+			returnValue[k] = v.StringVal()
+		case false:
+			for _, regex := range se.metadataRegexes {
+				if regex.MatchString(k) {
+					returnValue[k] = v.StringVal()
 					return
 				}
 			}
 		}
-
-		if skip {
-			return
-		}
-
-		returnValue[k] = v.StringVal()
 	})
 
 	return returnValue
