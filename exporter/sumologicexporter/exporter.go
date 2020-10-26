@@ -33,7 +33,8 @@ import (
 )
 
 const (
-	logKey string = "log"
+	logKey        string = "log"
+	maxBufferSize int    = 100
 )
 
 type sumologicexporter struct {
@@ -149,11 +150,12 @@ func (se *sumologicexporter) sendAndPushErrors(buffer *[]pdata.LogRecord, fields
 
 // pushLogsData groups data with common metadata uses sendAndPushErrors to send data to sumologic
 func (se *sumologicexporter) pushLogsData(ctx context.Context, ld pdata.Logs) (droppedTimeSeries int, err error) {
-	maxBufferSize := 100
-	buffer := make([]pdata.LogRecord, 0, maxBufferSize)
-	previousMetadata := ""
-	currentMetadata := ""
-	var errs []error
+	var (
+		buffer           []pdata.LogRecord = make([]pdata.LogRecord, 0, maxBufferSize)
+		previousMetadata string
+		currentMetadata  string
+		errs             []error
+	)
 
 	// Iterate over ResourceLogs
 	for i := 0; i < ld.ResourceLogs().Len(); i++ {
