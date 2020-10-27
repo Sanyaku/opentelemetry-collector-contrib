@@ -42,7 +42,7 @@ type Config struct {
 	// Format to post logs into Sumo. (default json)
 	//   * text - Logs will appear in Sumo Logic in text format.
 	//   * json - Logs will appear in Sumo Logic in json format.
-	LogFormat string `mapstructure:"log_format"`
+	LogFormat LogFormat `mapstructure:"log_format"`
 
 	// Metrics related configuration
 	// The format of metrics you will be sending, either graphite or carbon2 or prometheus (Default is carbon2)
@@ -76,11 +76,13 @@ func CreateDefaultTimeoutSettings() exporterhelper.TimeoutSettings {
 	}
 }
 
+type LogFormat string
+
 const (
 	// TextFormat represents log_format: text
-	TextFormat string = "text"
+	TextFormat LogFormat = "text"
 	// JSONFormat represents log_format: json
-	JSONFormat string = "json"
+	JSONFormat LogFormat = "json"
 	// GraphiteFormat represents metric_format: text
 	GraphiteFormat string = "graphite"
 	// Carbon2Format represents metric_format: json
