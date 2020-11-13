@@ -1,0 +1,37 @@
+# Group by Attributes processor
+
+Supported pipeline types: traces, logs
+Status: in development
+
+This processor groups the records by provided attributes, extracting them from the 
+record to resource level. 
+
+Typical use-cases:
+
+* extracting resources from "flat" data formats, such as Fluentbit logs
+* optimizing data by extracting common attributes
+
+Please refer to [config.go](./config.go) for the config spec.
+
+Examples:
+
+```yaml
+processors:
+  groupbyattrs:
+    group_by_keys:
+      - foo
+      - bar
+```
+
+## Configuration
+
+Refer to [config.yaml](./testdata/config.yaml) for detailed examples on using the processor.
+
+The `group_by_keys` property describes which attribute keys should be considered for grouping, if any of them is found
+the grouping occurs.
+
+## Metrics
+
+The following metrics are recorded by this processor:
+
+* `todo` represents TODO
