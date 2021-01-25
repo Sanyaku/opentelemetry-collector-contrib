@@ -1,4 +1,4 @@
-module github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbyauthprocessor
+module github.com/open-telemetry/opentelemetry-collector-contrib/processor/adjusttsprocessor
 
 go 1.14
 

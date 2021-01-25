@@ -1,0 +1,16 @@
+receivers:
+  examplereceiver:
+
+processors:
+  adjustts:
+    threshold: 10s
+
+exporters:
+  exampleexporter:
+
+service:
+  pipelines:
+    traces:
+      receivers: [examplereceiver]
+      processors: [adjustts]
+      exporters: [exampleexporter]

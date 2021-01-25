@@ -42,6 +42,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/httpforwarder"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/hostobserver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/observer/k8sobserver"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/adjusttsprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/cascadingfilterprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbyauthprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/groupbytraceprocessor"
@@ -155,6 +156,7 @@ func components() (component.Factories, error) {
 	}
 
 	processors := []component.ProcessorFactory{
+		adjusttsprocessor.NewFactory(),
 		cascadingfilterprocessor.NewFactory(),
 		sourceprocessor.NewFactory(),
 		groupbyauthprocessor.NewFactory(),
