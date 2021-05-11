@@ -35,7 +35,7 @@ type sumologicexporter struct {
 	graphiteFormatter   graphiteFormatter
 }
 
-func initExporter(cfg *Config) (*sumologicexporter, error) {
+func initLogsExporter(cfg *Config) (*sumologicexporter, error) {
 	switch cfg.LogFormat {
 	case JSONFormat:
 	case TextFormat:
@@ -43,6 +43,10 @@ func initExporter(cfg *Config) (*sumologicexporter, error) {
 		return nil, fmt.Errorf("unexpected log format: %s", cfg.LogFormat)
 	}
 
+	return initExporter(cfg)
+}
+
+func initMetricsExporter(cfg *Config) (*sumologicexporter, error) {
 	switch cfg.MetricFormat {
 	case GraphiteFormat:
 	case Carbon2Format:
@@ -51,6 +55,10 @@ func initExporter(cfg *Config) (*sumologicexporter, error) {
 		return nil, fmt.Errorf("unexpected metric format: %s", cfg.MetricFormat)
 	}
 
+	return initExporter(cfg)
+}
+
+func initExporter(cfg *Config) (*sumologicexporter, error) {
 	switch cfg.CompressEncoding {
 	case GZIPCompression:
 	case DeflateCompression:
@@ -61,6 +69,11 @@ func initExporter(cfg *Config) (*sumologicexporter, error) {
 
 	if len(cfg.HTTPClientSettings.Endpoint) == 0 {
 		return nil, errors.New("endpoint is not set")
+	}
+
+	httpClient, err := cfg.HTTPClientSettings.ToClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP Client: %w", err)
 	}
 
 	sfs, err := newSourceFormats(cfg)
@@ -83,11 +96,6 @@ func initExporter(cfg *Config) (*sumologicexporter, error) {
 		return nil, err
 	}
 
-	httpClient, err := cfg.HTTPClientSettings.ToClient()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP Client: %w", err)
-	}
-
 	se := &sumologicexporter{
 		config:              cfg,
 		sources:             sfs,
@@ -104,7 +112,7 @@ func newLogsExporter(
 	cfg *Config,
 	params component.ExporterCreateParams,
 ) (component.LogsExporter, error) {
-	se, err := initExporter(cfg)
+	se, err := initLogsExporter(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize the logs exporter: %w", err)
 	}
@@ -125,9 +133,9 @@ func newMetricsExporter(
 	cfg *Config,
 	params component.ExporterCreateParams,
 ) (component.MetricsExporter, error) {
-	se, err := initExporter(cfg)
+	se, err := initMetricsExporter(cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize the metrics exporter: %w", err)
 	}
 
 	return exporterhelper.NewMetricsExporter(
