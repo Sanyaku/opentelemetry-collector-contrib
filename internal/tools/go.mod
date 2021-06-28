@@ -10,6 +10,6 @@ require (
 	github.com/pavius/impi v0.0.3
 	github.com/tcnksm/ghr v0.13.0
 	go.opentelemetry.io/collector/cmd/checkdoc v0.24.0
-	go.opentelemetry.io/collector/cmd/issuegenerator v0.24.0
+	go.opentelemetry.io/collector/cmd/issuegenerator v0.29.0
 	go.opentelemetry.io/collector/cmd/mdatagen v0.24.0
 )
