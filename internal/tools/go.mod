@@ -11,5 +11,5 @@ require (
 	github.com/tcnksm/ghr v0.13.0
 	go.opentelemetry.io/collector/cmd/checkdoc v0.24.0
 	go.opentelemetry.io/collector/cmd/issuegenerator v0.24.0
-	go.opentelemetry.io/collector/cmd/mdatagen v0.24.0
+	go.opentelemetry.io/collector/cmd/mdatagen v0.29.0
 )

@@ -161,8 +161,8 @@ github.com/go-playground/locales v0.13.0 h1:HyWk6mgj5qFqCT5fjGBuRArbVDfE4hi8+e8c
 github.com/go-playground/locales v0.13.0/go.mod h1:taPMhCMXrRLJO55olJkUXHZBHCxTMfnGwq/HNwmWNS8=
 github.com/go-playground/universal-translator v0.17.0 h1:icxd5fm+REJzpZx7ZfpaD876Lmtgy7VtROAbHHXk8no=
 github.com/go-playground/universal-translator v0.17.0/go.mod h1:UkSxE5sNxxRwHyU+Scu5vgOQjsIJAF8j9muTVoKLVtA=
-github.com/go-playground/validator/v10 v10.4.1 h1:pH2c5ADXtd66mxoE0Zm9SUhxE20r7aM3F26W0hOn+GE=
-github.com/go-playground/validator/v10 v10.4.1/go.mod h1:nlOn6nFhuKACm19sB/8EGNn9GlaMV7XkbRSipzJ0Ii4=
+github.com/go-playground/validator/v10 v10.6.1 h1:W6TRDXt4WcWp4c4nf/G+6BkGdhiIo0k417gfr+V6u4I=
+github.com/go-playground/validator/v10 v10.6.1/go.mod h1:xm76BBt941f7yWdGnI2DVPFFg1UK3YY04qifoXU3lOk=
 github.com/go-redis/redis v6.15.8+incompatible/go.mod h1:NAIEuMOZ/fxfXJIrKDQDz8wamY7mA7PouImQ2Jvg6kA=
 github.com/go-sql-driver/mysql v1.4.0/go.mod h1:zAC/RDZ24gD3HViQzih4MyKcchzm+sOG5ZlKdlhCg5w=
 github.com/go-sql-driver/mysql v1.5.0/go.mod h1:DCzpHaOWr8IXmIStZouvnhqoel9Qv2LBy8hT2VhHyBg=
@@ -686,8 +686,8 @@ go.opentelemetry.io/collector/cmd/checkdoc v0.24.0 h1:DhI68PtL/ljF6VH9NqV8VIOfoH
 go.opentelemetry.io/collector/cmd/checkdoc v0.24.0/go.mod h1:ocXcey1UOABwvbGLqOrCPY5TDxEV+T5XW4KoEicDZfs=
 go.opentelemetry.io/collector/cmd/issuegenerator v0.24.0 h1:h0AKf+lMH4ekpH1Rw8aYD04aptgosOKoLeby27jnLvc=
 go.opentelemetry.io/collector/cmd/issuegenerator v0.24.0/go.mod h1:RAUZ03z9JaCu9D+ox5p7LDcv/d4D02EiBJg0sOOzoVY=
-go.opentelemetry.io/collector/cmd/mdatagen v0.24.0 h1:lR0np+V8xvVblHcWDIK9YS4lkmW3KMCWUQop0zA7ut0=
-go.opentelemetry.io/collector/cmd/mdatagen v0.24.0/go.mod h1:oWCxEeYMK/9i6cQEVs5YCWr5Q5KZn9uxnLLQxm8j/S4=
+go.opentelemetry.io/collector/cmd/mdatagen v0.29.0 h1:jnwuLvD7lyp/UQiWRGxbt+foN3U+fWoJf1eoW32HxuQ=
+go.opentelemetry.io/collector/cmd/mdatagen v0.29.0/go.mod h1:js71e2Fm7uL2yR/sJ+54jzvVGhL3E9SpBIj0MRf3yp0=
 go.uber.org/atomic v1.3.2/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/atomic v1.5.0/go.mod h1:sABNBOSYdrvTF6hTgEIbc7YasKWGhgEQZyfxyTvoXHQ=
