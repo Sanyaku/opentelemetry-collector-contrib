@@ -10,11 +10,9 @@ require (
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/onsi/ginkgo v1.14.1 // indirect
 	github.com/onsi/gomega v1.10.2 // indirect
-	github.com/pelletier/go-toml v1.8.0 // indirect
-	github.com/spf13/viper v1.7.1
+	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/collector v0.24.0
-	go.uber.org/zap v1.16.0
-	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2
-	gopkg.in/ini.v1 v1.57.0 // indirect
+	go.uber.org/zap v1.17.0
+	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
 )
