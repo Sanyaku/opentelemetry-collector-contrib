@@ -2,4 +2,4 @@ module github.com/open-telemetry/opentelemetry-collector-contrib/extension/stora
 
 go 1.14
 
-require go.opentelemetry.io/collector v0.24.0
+require go.opentelemetry.io/collector v0.29.0
